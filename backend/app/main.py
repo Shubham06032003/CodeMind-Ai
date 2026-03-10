@@ -29,6 +29,7 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "https://codemind-ai.vercel.app",
+    "https://code-mind-ai-sable.vercel.app",
     "https://code-mind-au2472ykj-shubham06032003s-projects.vercel.app"
 ]
 

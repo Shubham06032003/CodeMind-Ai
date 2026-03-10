@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CodeMind AI — Understand Any Codebase Instantly
 
 ![UI Reference - Landing Page](./assets/ui-reference/Screenshot_2026-03-08_201819.png)
@@ -257,3 +258,7 @@ The UI is based on two design screenshots:
 ---
 
 *© 2024 CodeMind AI. Powering the next generation of developers.*
+=======
+# CodeMind-Ai
+CodeMind AI is an AI-powered codebase explainer that lets developers paste a GitHub repository and ask questions about the project. It uses Retrieval-Augmented Generation (RAG), Gemini LLM, and FAISS vector search to analyze code and generate contextual explanations.
+>>>>>>> 07a3ef1a7b2ad8ecac30e678eda9b1371d2596b8

@@ -4,32 +4,31 @@ FROM python:3.11
 # Set working directory
 WORKDIR /app
 
+# Set Python path
 ENV PYTHONPATH=/app/backend
 
-# Install Node.js
+# Install system dependencies
 RUN apt-get update && apt-get install -y nodejs npm git
 
-# Copy backend
-COPY backend ./backend
+# Copy requirements first (for Docker cache)
+COPY backend/requirements.txt ./backend/requirements.txt
 
 # Install backend dependencies
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
+# Copy backend code
+COPY backend ./backend
+
 # Copy frontend
 COPY frontend ./frontend
 
-# Install frontend dependencies
+# Build frontend
 WORKDIR /app/frontend
 RUN npm install
-
-# Build frontend
 RUN npm run build
 
-# Back to root
+# Go back
 WORKDIR /app
-
-# Copy everything else
-COPY . .
 
 # Expose port
 EXPOSE 8000

@@ -7,11 +7,13 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-from app.api.routes import router
+from backend.app.api.routes import router
 
 app = FastAPI(
     title="CodeMind AI",
@@ -19,12 +21,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow the Vite dev server and production build
+# -----------------------------
+# CORS
+# -----------------------------
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
-    os.getenv("FRONTEND_URL", "http://localhost:5173"),
+    "https://codemind-ai.vercel.app",
+    "https://code-mind-au2472ykj-shubham06032003s-projects.vercel.app"
 ]
 
 app.add_middleware(
@@ -35,9 +40,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -----------------------------
+# API Routes
+# -----------------------------
 app.include_router(router, prefix="/api")
 
+# -----------------------------
+# Serve React Build
+# -----------------------------
+if os.path.exists("frontend/dist"):
 
-@app.get("/")
-async def root():
-    return {"message": "CodeMind AI backend is running 🚀", "docs": "/docs"}
+    app.mount(
+        "/assets",
+        StaticFiles(directory="frontend/dist/assets"),
+        name="assets"
+    )
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        return FileResponse("frontend/dist/index.html")
+
+else:
+
+    @app.get("/")
+    async def root():
+        return {
+            "message": "CodeMind AI backend is running 🚀",
+            "docs": "/docs"
+        }

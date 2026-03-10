@@ -7,7 +7,7 @@ import asyncio
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
-from app.services.rag_engine import analyze_repo, answer_question, task_store
+from ..services.rag_engine import analyze_repo, answer_question, task_store
 
 router = APIRouter()
 

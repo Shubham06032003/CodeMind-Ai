@@ -7,7 +7,7 @@ function backendPlugin() {
   let backendProcess = null
   return {
     name: 'start-backend',
-    buildStart() {
+    configureServer(server) {
       const backendDir = path.resolve(__dirname, '../backend')
       const isWin = process.platform === 'win32'
       const python = isWin
@@ -16,7 +16,7 @@ function backendPlugin() {
 
       backendProcess = spawn(
         python,
-        ['-m', 'uvicorn', 'app.main:app', '--reload', '--port', '8000'],
+        ['-m', 'uvicorn', 'app.main:app', '--reload', '--reload-dir', 'app', '--host', '127.0.0.1', '--port', '8000'],
         { cwd: backendDir, stdio: 'inherit', shell: false }
       )
 
@@ -24,7 +24,7 @@ function backendPlugin() {
         console.error('[backend] Failed to start:', err.message)
       })
 
-      console.log('[backend] Started on http://localhost:8000')
+      console.log('[backend] Started on http://127.0.0.1:8000')
     },
     closeBundle() {
       if (backendProcess) {
@@ -36,12 +36,12 @@ function backendPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), backendPlugin()],
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

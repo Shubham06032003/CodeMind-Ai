@@ -11,7 +11,7 @@ from typing import List
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 EMBEDDING_MODEL = "gemini-embedding-001"
-EMBEDDING_DIM = 768
+EMBEDDING_DIM = 3072
 
 
 import random

@@ -220,7 +220,7 @@ def analyze_repo(task_id: str, repo_url: str) -> None:
                     chunk_count=len(all_chunks))
 
         # ── Step 5: Index ──────────────────────────────────────────────────
-        _update("saving", 90, "Building FAISS index…")
+        _update("saving", 90, "Building index…")
 
         metadata = [{k: v for k, v in c.items() if k != "text"} for c in all_chunks]
         create_index(task_id, all_embeddings, metadata)

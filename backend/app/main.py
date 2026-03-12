@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 # Load environment variables
 load_dotenv()
 
-from backend.app.api.routes import router
+from app.api.routes import router
 
 app = FastAPI(
     title="CodeMind AI",

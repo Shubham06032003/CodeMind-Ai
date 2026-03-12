@@ -1,83 +1,108 @@
 """
-CodeMind AI — FAISS Vectorstore
-Manages creation, persistence, and similarity search of FAISS indexes.
-Each task gets its own index stored under FAISS_INDEX_DIR/{task_id}/.
+CodeMind AI — Chroma Vectorstore
+Manages creation, persistence, and similarity search using ChromaDB.
+Each task gets its own Chroma collection stored under CHROMA_DIR.
 """
 
 import os
-import json
-import pickle
-import numpy as np
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
-FAISS_INDEX_DIR = os.getenv("FAISS_INDEX_DIR", "./faiss_indexes")
+CHROMA_DIR = os.getenv("CHROMA_DIR", "./chroma_db")
 
 
-def _index_path(task_id: str) -> str:
-    return os.path.join(FAISS_INDEX_DIR, task_id)
+def _get_client():
+    import chromadb
+    return chromadb.PersistentClient(path=CHROMA_DIR)
+
+
+def _collection_name(task_id: str) -> str:
+    return f"repo_{task_id.replace('-', '_')}"
 
 
 def create_index(task_id: str, embeddings: List[List[float]], metadata: List[Dict[str, Any]]) -> None:
     """
-    Build a new FAISS flat L2 index from embeddings and save it with metadata.
+    Store embeddings and metadata in a Chroma collection.
+    Each task gets its own collection named repo_{task_id}.
     """
+    client = _get_client()
+
+    # Delete existing collection if re-indexing same task
     try:
-        import faiss
-    except ImportError:
-        raise RuntimeError("faiss-cpu is not installed. Run: pip install faiss-cpu")
+        client.delete_collection(name=_collection_name(task_id))
+    except Exception:
+        pass
 
-    vectors = np.array(embeddings, dtype=np.float32)
-    dim = vectors.shape[1]
+    collection = client.get_or_create_collection(
+        name=_collection_name(task_id),
+        metadata={"hnsw:space": "cosine"}
+    )
 
-    index = faiss.IndexFlatL2(dim)
-    # Wrap with IDMap so we can store integer IDs
-    index_with_ids = faiss.IndexIDMap(index)
-    ids = np.arange(len(embeddings), dtype=np.int64)
-    index_with_ids.add_with_ids(vectors, ids)
+    ids = [str(i) for i in range(len(embeddings))]
+    documents = [m.get("snippet", "")[:500] for m in metadata]
+    metadatas = [
+        {
+            "file": m.get("file", ""),
+            "start_line": int(m.get("start_line", 0)),
+            "end_line": int(m.get("end_line", 0)),
+            "snippet": m.get("snippet", "")[:500],
+        }
+        for m in metadata
+    ]
 
-    # Persist index and metadata
-    os.makedirs(_index_path(task_id), exist_ok=True)
-    faiss.write_index(index_with_ids, os.path.join(_index_path(task_id), "faiss.index"))
+    # Add in batches of 100 to avoid memory spikes
+    batch_size = 100
+    for i in range(0, len(ids), batch_size):
+        collection.add(
+            ids=ids[i:i + batch_size],
+            embeddings=embeddings[i:i + batch_size],
+            documents=documents[i:i + batch_size],
+            metadatas=metadatas[i:i + batch_size],
+        )
 
-    with open(os.path.join(_index_path(task_id), "metadata.json"), "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False)
-
-    print(f"[vectorstore] Saved FAISS index ({len(embeddings)} vectors, dim={dim}) for task {task_id}")
+    print(f"[vectorstore] Saved {len(embeddings)} vectors to Chroma for task {task_id}")
 
 
 def search(task_id: str, query_vector: List[float], top_k: int = 6) -> List[Dict[str, Any]]:
     """
     Perform similarity search and return top_k metadata entries with scores.
-    Returns empty list if index not found.
+    Returns empty list if collection not found.
     """
+    client = _get_client()
+
     try:
-        import faiss
-    except ImportError:
+        collection = client.get_collection(name=_collection_name(task_id))
+    except Exception:
         return []
 
-    index_file = os.path.join(_index_path(task_id), "faiss.index")
-    meta_file = os.path.join(_index_path(task_id), "metadata.json")
-
-    if not os.path.exists(index_file):
+    count = collection.count()
+    if count == 0:
         return []
 
-    index = faiss.read_index(index_file)
-    with open(meta_file, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
+    results = collection.query(
+        query_embeddings=[query_vector],
+        n_results=min(top_k, count),
+        include=["documents", "metadatas", "distances"]
+    )
 
-    query = np.array([query_vector], dtype=np.float32)
-    distances, indices = index.search(query, min(top_k, len(metadata)))
+    output = []
+    for i in range(len(results["ids"][0])):
+        meta = results["metadatas"][0][i]
+        output.append({
+            "file": meta.get("file", ""),
+            "start_line": meta.get("start_line", 0),
+            "end_line": meta.get("end_line", 0),
+            "snippet": meta.get("snippet") or results["documents"][0][i],
+            "score": results["distances"][0][i],
+        })
 
-    results = []
-    for dist, idx in zip(distances[0], indices[0]):
-        if idx < 0 or idx >= len(metadata):
-            continue
-        entry = dict(metadata[idx])
-        entry["score"] = float(dist)
-        results.append(entry)
-
-    return results
+    return output
 
 
 def index_exists(task_id: str) -> bool:
-    return os.path.exists(os.path.join(_index_path(task_id), "faiss.index"))
+    """Check if a Chroma collection exists and has vectors for this task."""
+    try:
+        client = _get_client()
+        collection = client.get_collection(name=_collection_name(task_id))
+        return collection.count() > 0
+    except Exception:
+        return False

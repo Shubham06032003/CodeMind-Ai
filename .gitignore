@@ -20,6 +20,7 @@ build/
 faiss_indexes/
 *.index
 
+chroma_db/
 # Cloned repos (temp)
 tmp_repos/
 

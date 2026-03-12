@@ -163,8 +163,11 @@ def analyze_repo(task_id: str, repo_url: str) -> None:
                 text=True
             )
             if result.returncode != 0:
-                _update("error", 0, f"Clone failed: {result.stderr}")
-                return
+                if "checkout failed" in result.stderr or "Filename too long" in result.stderr:
+                    print(f"[clone] Warning: some files skipped due to long filenames, continuing...")
+                else:
+                    _update("error", 0, f"Clone failed: {result.stderr}")
+                    return
         except subprocess.TimeoutExpired:
             _update("error", 0, "Clone timed out after 180 seconds.")
             shutil.rmtree(clone_dir, ignore_errors=True)

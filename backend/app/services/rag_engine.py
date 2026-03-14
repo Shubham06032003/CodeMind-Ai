@@ -188,8 +188,8 @@ def analyze_repo(task_id: str, repo_url: str) -> None:
         stack_tags = _derive_stack(extensions_found, clone_dir)
 
         limit_exceeded = False
-        if len(files) > 150:
-            files = files[:150]
+        if len(files) > 300:
+            files = files[:300]
             limit_exceeded = True
 
         _update("indexing", 30, f"Found {len(files)} files. Chunking…", file_count=len(files), limit_exceeded=limit_exceeded)

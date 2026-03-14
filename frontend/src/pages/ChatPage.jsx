@@ -47,7 +47,7 @@ export default function ChatPage({ taskId, repoUrl, onBack }) {
         clearInterval(pollRef.current)
         
         if (data.limit_exceeded && !sessionStorage.getItem(`limit_warned_${taskId}`)) {
-           setLimitMessage('Repository File Limit Reached. To ensure fast analysis, we only indexed the first 150 files.')
+           setLimitMessage('Repository File Limit Reached. To ensure fast analysis, we only indexed the first 300 files.')
            setShowLimitPopup(true)
            sessionStorage.setItem(`limit_warned_${taskId}`, 'true')
         }
